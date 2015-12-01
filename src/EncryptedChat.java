@@ -9,12 +9,6 @@ import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 public class EncryptedChat extends Application {
-
-	private TextField encryptionKey;
-	
-	private TextField ipAddress;
-	
-	private TextField portNumber;
 	
 	@Override
 	public void start(Stage primaryStage) throws Exception {
@@ -37,7 +31,6 @@ public class EncryptedChat extends Application {
 					if (validateServerParameters(portNumber.getText(), encryptionKey.getText())) {
 						ServerApplication server = new ServerApplication(portNumber.getText(), encryptionKey.getText());
 						try {
-							System.out.println("Starting");
 							server.start(primaryStage);
 						} catch (Exception e) {
 							e.printStackTrace();
