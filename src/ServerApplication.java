@@ -1,61 +1,157 @@
-import java.io.File;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Scanner;
 
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.TextField;
+import javafx.scene.control.TextArea;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
 import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 
 public class ServerApplication extends Application {
 	
-	public String port;
-	public String key;
+	public int port;
+	public int key;
+	
+	public final String SERVER_NAME = "Mario > ";
+	public final String CLIENT_NAME = "Luigi > ";
+	
+	private ServerThread server;
+	
+	private final TextArea textArea = new TextArea();
+	private final TextFlow textFlow = new TextFlow();
 	
 	public ServerApplication(String port, String key) {
-		this.port = port;
-		this.key = key;
+		try {
+			this.port = Integer.parseInt(port);
+			this.key = Integer.parseInt(key);
+		} catch (NumberFormatException nfe) {
+			// Defaults
+			this.port = 1995;
+			this.key = 64;
+		}
+		server = new ServerThread();
+		server.start();
 	}
 
 	@Override
 	public void start(Stage primaryStage) throws Exception {
-
-		// Used to get the encryption key from a user to decrypt a file.
-		TextField inputKey = new TextField();
-		// Displays operation status to the user.
-		Text message = new Text("Welcome!");
-		// Displays the encryption key for the file that was just encrypted.
-		Text outputKey = new Text(); 
-			
-		primaryStage.setTitle("GUI File Encryptor");
+		
+		primaryStage.setTitle("Encrypted Chat Server");
 		GridPane grid = new GridPane();
 		grid.setAlignment(Pos.CENTER);
 		grid.setHgap(10);
 		grid.setVgap(10);
 		grid.setPadding(new Insets(25, 25, 25, 25));		
 		
-		// Button and click event for encryption.
-		Button eButton = new Button("Encrypt");
-		eButton.setOnAction( event -> {
-			
+		textArea.setOnKeyPressed(new EventHandler<KeyEvent>() {
+				@Override
+				public void handle(KeyEvent event) {
+					if (event.getCode().equals(KeyCode.ENTER)) {
+						textFlow.getChildren().add(new Text(textArea.getText()));
+						textArea.clear();
+					}
+				}
+			});
+		
+		Button sendButton = new Button("Send");
+		sendButton.setOnAction( event -> {
+			textFlow.getChildren().add(new Text(textArea.getText()));
+			textArea.clear();
 		});
 		
-		// Add the gui elements.
-		grid.add(eButton, 0, 0);
-		grid.add(outputKey, 2, 0);
-		grid.add(inputKey, 2, 1);
-		grid.add(message, 0, 2);
-		grid.add(new Text("Key:"), 1, 0);
-		grid.add(new Text("Key:"), 1, 1);
+		grid.add(textFlow, 0, 0);
+		grid.add(textArea, 0, 1);
+		grid.add(sendButton, 1, 1);
 		// Set the column span of the status message.
-		GridPane.setColumnSpan(message, 3);
+		//GridPane.setColumnSpan(textFlow, 3);
 		
 		// Set dimensions and display.
-		Scene scene = new Scene(grid, 400, 200);
+		Scene scene = new Scene(grid, 800, 400);
 		primaryStage.setScene(scene);
 		primaryStage.show();
+	}
+	
+	class ServerThread extends Thread {
+		
+		private ServerSocket serverSocket;
+		
+		public ServerThread() {
+			try {
+				serverSocket = new ServerSocket(port);			
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+			}
+		}
+		
+		@Override
+		public void run() {
+			
+			while (true) {
+				BufferedReader reader = null;
+				
+				try {
+					Socket socket = serverSocket.accept();
+					reader = new BufferedReader(
+							new InputStreamReader(socket.getInputStream()));
+					String s = reader.readLine();
+					if (s.equals("<*message*>")) {
+						readMessage(reader);
+					} else if (s.equals("<*file*>")) {
+						readFile(socket);
+					}
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
+				} finally {
+					if (reader  != null) {
+						try {
+							reader.close();
+						} catch (IOException ioe) {
+							// TODO Auto-generated catch block
+							ioe.printStackTrace();
+						}
+					}
+				}
+			}
+		}
+		
+		private void readMessage(BufferedReader reader) {
+			String s = "";
+			try {
+				while ((s = reader.readLine()) != null && !(s.equals("<*file*>"))) {
+					
+				}
+			} catch (IOException ioe) {
+				// TODO Auto-generated catch block
+				ioe.printStackTrace();
+			}
+		}
+		
+		private void readFile(Socket socket) {
+			
+		}
+		
+		private void writeMessage() {
+			
+		}
+		
+		private void writeFile() {
+			
+		}
 	}
 }

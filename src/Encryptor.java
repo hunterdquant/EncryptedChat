@@ -6,7 +6,7 @@
 
 public abstract class Encryptor {
 	
-	private byte encryptionKey;
+	private int encryptionKey;
 	private String clearText;
 	private String encryptedMessage;
 	
@@ -18,7 +18,7 @@ public abstract class Encryptor {
 	 * 
 	 * @param key - the value to be set as the encryption key.
 	 */
-	public void setEncryptionKey(byte key) {
+	public void setEncryptionKey(int key) {
 		encryptionKey = key;
 	}
 	
@@ -49,7 +49,7 @@ public abstract class Encryptor {
 	 * 
 	 * @return The byte value of encryptionKey
 	 */
-	public byte getEncryptionKey() {
+	public int getEncryptionKey() {
 		return encryptionKey;
 	}
 	

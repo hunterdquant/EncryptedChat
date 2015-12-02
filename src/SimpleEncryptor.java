@@ -11,8 +11,8 @@ public class SimpleEncryptor extends Encryptor {
 	/**
 	 * Default constructor.
 	 */
-	public SimpleEncryptor() {
-		
+	public SimpleEncryptor(int n) {
+		setEncryptionKey(n);
 	}
 	
 	/**
@@ -29,7 +29,7 @@ public class SimpleEncryptor extends Encryptor {
 		}
 		
 		// Sum mod 128 is the encryption key for the message.
-		byte key = (byte)(sum % 128);
+		int key = getEncryptionKey(); 
 		// Add 4 to each char in the message.
 		for (int i = 0; i < msgChars.length; i++) {
 			msgChars[i] += 4;
@@ -41,7 +41,6 @@ public class SimpleEncryptor extends Encryptor {
 			encryptedMsg += (char)(c ^ key);
 		}
 		setEncryptedMessage(encryptedMsg);
-		setEncryptionKey(key);
 	}
 	
 	/**
