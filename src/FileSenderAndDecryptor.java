@@ -18,14 +18,25 @@ import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-public class GuiFileEncrypt extends Application {
+public class FileSenderAndDecryptor extends Application {
 
-	/* Main */
+	private ServerApplication.ServerThread server;
+	private ClientApplication.ClientThread client;
+	private int key;
 	
-	public static void main(String[] args) {
-		launch(args);
+	FileSenderAndDecryptor(Thread t, int key) {
+		this.key = key;
+		if (t instanceof ServerApplication.ServerThread) {
+			server = (ServerApplication.ServerThread)t;
+			server = null;
+		} else if (t instanceof ClientApplication.ClientThread) {
+			client = (ClientApplication.ClientThread)t;
+			server = null;
+		} else {
+			client = null;
+			server = null;
+		}
 	}
-	
 	/* public methods */
 	
 	/**
@@ -33,13 +44,6 @@ public class GuiFileEncrypt extends Application {
 	 */
 	@Override
 	public void start(Stage primaryStage) {
-
-		// Used to get the encryption key from a user to decrypt a file.
-		TextField inputKey = new TextField();
-		// Displays operation status to the user.
-		Text message = new Text("Welcome!");
-		// Displays the encryption key for the file that was just encrypted.
-		Text outputKey = new Text(); 
 			
 		primaryStage.setTitle("GUI File Encryptor");
 		GridPane grid = new GridPane();
@@ -49,23 +53,24 @@ public class GuiFileEncrypt extends Application {
 		grid.setPadding(new Insets(25, 25, 25, 25));		
 		
 		// Button and click event for encryption.
-		Button eButton = new Button("Encrypt");
+		Button eButton = new Button("Send");
 		eButton.setOnAction( event -> {
 			// Get the respective files.
 			File inputFile = getInputFile();
 			File outputFile = getOutputFile();
 			
 			// If the don't exist report to the user.
-			if (inputFile != null && outputFile != null) {
+			if (inputFile != null) {
 				
 				// Create the FileEncryptor and encrypt the file.
-				FileEncryptor fe = new FileEncryptor(inputFile, outputFile.getAbsolutePath());
+				FileEncryptor fe = new FileEncryptor(inputFile, outputFile.getAbsolutePath(), key);
 				fe.textEncrypt();
 				// Display information to the user.
-				outputKey.setText("" + fe.getEncryptionKey());
-				message.setText("Your file has been encrypted!");
-			} else {
-				message.setText("You failed to properly select files.");
+				if (server != null) {
+					server.writeFile(outputFile);
+				} else if (client != null) {
+					client.writeFile(outputFile);
+				}
 			}
 		});
 		
@@ -73,8 +78,6 @@ public class GuiFileEncrypt extends Application {
 		dButton.setOnAction( event -> {
 			
 			try {
-				// Try to parse the user input.
-				byte key = Byte.parseByte(inputKey.getText());
 				File inputFile = getInputFile();
 				File outputFile = getOutputFile();
 				
@@ -82,29 +85,15 @@ public class GuiFileEncrypt extends Application {
 					
 					FileEncryptor fe = new FileEncryptor(inputFile, outputFile.getAbsolutePath(), key);
 					fe.textDecrypt();
-					message.setText("Your file has been decrypted!");
-				} else if (key < 0 || key > 127) {
-					// Keys must be between 0-127
-					message.setText("You entered an invalid key! 0-127.");
-				} else {
-					message.setText("You failed to properly select files.");
 				}
 			} catch (NumberFormatException nfe) {
-				// Report to the user that they entered invalid input.
-				message.setText("You entered an invalid key! 0-127");
+				
 			}
 		});
 		
 		// Add the gui elements.
 		grid.add(eButton, 0, 0);
 		grid.add(dButton, 0, 1);
-		grid.add(outputKey, 2, 0);
-		grid.add(inputKey, 2, 1);
-		grid.add(message, 0, 2);
-		grid.add(new Text("Key:"), 1, 0);
-		grid.add(new Text("Key:"), 1, 1);
-		// Set the column span of the status message.
-		GridPane.setColumnSpan(message, 3);
 		
 		// Set dimensions and display.
 		Scene scene = new Scene(grid, 400, 200);

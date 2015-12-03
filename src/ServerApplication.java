@@ -2,6 +2,7 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -104,9 +105,16 @@ public class ServerApplication extends Application {
 			});
 		});
 		
+		Button fileButton = new Button("File");
+		fileButton.setOnAction( event -> {
+			FileSenderAndDecryptor  fsad = new FileSenderAndDecryptor(server, key);
+			fsad.start(new Stage());
+		});
+		
 		grid.add(chatArea, 0, 0);
 		grid.add(inputArea, 0, 1);
 		grid.add(sendButton, 1, 1);
+		grid.add(fileButton, 1, 2);
 		// Set the column span of the status message.
 		//GridPane.setColumnSpan(textFlow, 3);
 		
@@ -158,8 +166,8 @@ public class ServerApplication extends Application {
 					writer = new PrintWriter(socket.getOutputStream(), true);
 					String message = null;
 					while ((message = reader.readLine()) != null) {
-						if (message.contains("<*message*>")) {
-							readMessage(message.substring(12));
+						if (message.contains("<*message>")) {
+							readMessage(message.substring(11));
 						}
 					}
 				} catch (IOException ioe) {
@@ -196,15 +204,15 @@ public class ServerApplication extends Application {
 			
 		}
 		
-		private void writeMessage(String message) {
+		public void writeMessage(String message) {
 			
 			SimpleEncryptor enc = new SimpleEncryptor(key);
 			enc.setClearText(name + message);
 			enc.textEncrypt();
-			writer.println("<*message*> " + enc.getEncryptedMessage());
+			writer.println("<*message> " + enc.getEncryptedMessage());
 		}
 		
-		private void writeFile() {
+		public void writeFile(File file) {
 			
 		}
 		

@@ -37,7 +37,7 @@ public class FileEncryptor extends Encryptor{
 	 * @param outputFileName - The name of the output file.
 	 * @param key - The encryption key used for decrypting.
 	 */
-	public FileEncryptor(File inputFile, String outputFileName, byte key) {
+	public FileEncryptor(File inputFile, String outputFileName, int key) {
 		this.inputFile = inputFile;
 		this.outputFileName =  outputFileName;
 		setEncryptionKey(key);
@@ -55,7 +55,6 @@ public class FileEncryptor extends Encryptor{
 								new FileReader(inputFile.getAbsolutePath()));
 			BufferedWriter out = new BufferedWriter(
 								 new FileWriter(outputFileName));
-			setEncryptionKey((byte)(inputFile.length()%128));
 			int c;
 			while ((c = in.read()) != -1) {
 				out.write((c+4)^getEncryptionKey());

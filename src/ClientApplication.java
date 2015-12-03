@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -191,10 +192,10 @@ public class ClientApplication extends Application {
 			SimpleEncryptor enc = new SimpleEncryptor(key);
 			enc.setClearText(name + message);
 			enc.textEncrypt();
-			writer.println("<*message*> " + enc.getEncryptedMessage());
+			writer.println("<*message> " + enc.getEncryptedMessage());
 		}
 		
-		private void writeFile() {
+		void writeFile(File file) {
 			
 		}
 
