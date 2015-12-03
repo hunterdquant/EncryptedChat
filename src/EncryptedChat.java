@@ -19,6 +19,8 @@ public class EncryptedChat extends Application {
 				TextField ipAddress = new TextField();
 				
 				TextField portNumber = new TextField();
+				
+				TextField name = new TextField();
 					
 				primaryStage.setTitle("Encrypted Chat Client");
 				GridPane grid = new GridPane();
@@ -29,7 +31,7 @@ public class EncryptedChat extends Application {
 				Button serverButton = new Button("Run as server");
 				serverButton.setOnAction( event -> {
 					if (validateServerParameters(portNumber.getText(), encryptionKey.getText())) {
-						ServerApplication server = new ServerApplication(portNumber.getText(), encryptionKey.getText());
+						ServerApplication server = new ServerApplication(name.getText(), portNumber.getText(), encryptionKey.getText());
 						try {
 							server.start(primaryStage);
 						} catch (Exception e) {
@@ -40,7 +42,7 @@ public class EncryptedChat extends Application {
 				Button clientButton = new Button("Run as client");
 				clientButton.setOnAction( event -> {
 					if (validateClientParameters(portNumber.getText(), encryptionKey.getText(), ipAddress.getText())) {
-						ClientApplication client = new ClientApplication(ipAddress.getText(), portNumber.getText(), encryptionKey.getText());
+						ClientApplication client = new ClientApplication(name.getText(), ipAddress.getText(), portNumber.getText(), encryptionKey.getText());
 						try {
 							client.start(primaryStage);
 						} catch (Exception e) {
@@ -49,14 +51,16 @@ public class EncryptedChat extends Application {
 					}
 				});
 				
-				grid.add(encryptionKey, 1, 0);
-				grid.add(ipAddress, 1, 1);
-				grid.add(portNumber, 1, 2);
-				grid.add(new Text("Key:"), 0, 0);
-				grid.add(new Text("IP:"), 0, 1);
-				grid.add(new Text("Port:"), 0, 2);
-				grid.add(serverButton, 0, 3);
-				grid.add(clientButton, 0, 4);
+				grid.add(name, 1, 0);
+				grid.add(encryptionKey, 1, 1);
+				grid.add(ipAddress, 1, 2);
+				grid.add(portNumber, 1, 3);
+				grid.add(new Text("Name: "), 0, 0);
+				grid.add(new Text("Key:"), 0, 1);
+				grid.add(new Text("IP:"), 0, 2);
+				grid.add(new Text("Port:"), 0, 3);
+				grid.add(serverButton, 0, 4);
+				grid.add(clientButton, 0, 5);
 				// Set dimensions and display.
 				Scene scene = new Scene(grid, 400, 300);
 				primaryStage.setScene(scene);

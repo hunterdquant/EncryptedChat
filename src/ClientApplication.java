@@ -30,17 +30,18 @@ public class ClientApplication extends Application {
 	public String ip;
 	public int key;
 	
-	public final String SERVER_NAME = "Mario > ";
-	public final String CLIENT_NAME = "Luigi > ";
+	private String name; 
 	
 	private ClientThread client;
 	
-	private final TextArea textArea = new TextArea();
-	private final TextFlow textFlow = new TextFlow();
+	private final TextArea inputArea = new TextArea();
+	private final TextArea chatArea = new TextArea();
 	
-	public ClientApplication(String port, String ip, String key) {
+	public ClientApplication(String name, String ip, String port, String key) {
 		try {
+			this.name = name + " > ";
 			this.port = Integer.parseInt(port);
+			System.out.println(this.port);
 			this.ip = ip;
 			this.key = Integer.parseInt(key);
 		} catch (NumberFormatException nfe) {
@@ -60,30 +61,49 @@ public class ClientApplication extends Application {
 		grid.setAlignment(Pos.CENTER);
 		grid.setHgap(10);
 		grid.setVgap(10);
-		grid.setPadding(new Insets(25, 25, 25, 25));		
-		
-		textArea.setOnKeyPressed(new EventHandler<KeyEvent>() {
+		chatArea.setPrefSize(700, 250);
+		chatArea.setMaxSize(700, 250);
+		chatArea.setMinSize(700, 250);
+		chatArea.setEditable(false);
+		chatArea.setWrapText(true);
+		inputArea.setPrefSize(700, 100);
+		inputArea.setMaxSize(700, 100);
+		inputArea.setMinSize(700, 100);
+		inputArea.setWrapText(true);
+		inputArea.setOnKeyPressed(new EventHandler<KeyEvent>() {
 				@Override
 				public void handle(KeyEvent event) {
 					if (event.getCode().equals(KeyCode.ENTER)) {
-						String message = textArea.getText();
-						textFlow.getChildren().add(new Text(CLIENT_NAME + message + '\n'));
+						String message = inputArea.getText();
+						chatArea.appendText(name + message + '\n');
 						client.writeMessage(message);
-						textArea.clear();
+						inputArea.clear();
+						Platform.runLater(new Runnable() {
+							@Override
+							public void run() {
+								inputArea.positionCaret(0);
+							}
+						});
 					}
 				}
 			});
 		
 		Button sendButton = new Button("Send");
 		sendButton.setOnAction( event -> {
-			String message = textArea.getText();
-			textFlow.getChildren().add(new Text(CLIENT_NAME + message + '\n'));
+			String message = inputArea.getText();
+			chatArea.appendText(name + message + '\n');
 			client.writeMessage(message);
-			textArea.clear();
+			inputArea.clear();
+			Platform.runLater(new Runnable() {
+				@Override
+				public void run() {
+					inputArea.positionCaret(0);
+				}
+			});
 		});
 		
-		grid.add(textFlow, 0, 0);
-		grid.add(textArea, 0, 1);
+		grid.add(chatArea, 0, 0);
+		grid.add(inputArea, 0, 1);
 		grid.add(sendButton, 1, 1);
 		// Set the column span of the status message.
 		//GridPane.setColumnSpan(textFlow, 3);
@@ -92,17 +112,18 @@ public class ClientApplication extends Application {
 		Scene scene = new Scene(grid, 800, 400);
 		primaryStage.setScene(scene);
 		primaryStage.setOnCloseRequest( event -> {
+			client.close();
 			client.interrupt();
 		});
+		primaryStage.setResizable(false);
 		primaryStage.show();
 	}
 	
 	private void addText(String s) {
-		System.out.println("im here");
 		Platform.runLater(new Runnable() { 
 			@Override
 			public void run(){
-				textFlow.getChildren().add(new Text(s));
+				chatArea.appendText(s);;
 			}
 		});
 	}
@@ -112,7 +133,7 @@ public class ClientApplication extends Application {
 		private Socket socket;
 
 		private PrintWriter writer;
-		private	Scanner reader;
+		private	BufferedReader reader;
 		
 		public ClientThread() {
 			socket = null;
@@ -123,44 +144,42 @@ public class ClientApplication extends Application {
 			
 			while (!Thread.currentThread().isInterrupted()) {
 				try {
-					socket = new Socket(ip, 55554);
-					reader = new Scanner(socket.getInputStream());
+					socket = new Socket(ip, port);
+					reader = new BufferedReader(
+							new InputStreamReader(socket.getInputStream()));
 					writer = new PrintWriter(socket.getOutputStream(), true);
-					while (true && !Thread.currentThread().isInterrupted()) {
-						String s = reader.next();
-						System.out.println(s);
-						if (s.equals("<*message*>")) {
-							readMessage(reader);
-						} else if (s.equals("<*file*>")) {
-							readFile(socket);
+					String message = null;
+					while ((message = reader.readLine()) != null) {
+						if (message.contains("<*message>")) {
+							readMessage(message.substring(11));
 						}
 					}
 				} catch (IOException ioe) {
 					ioe.printStackTrace();
+				} finally {
+					if (socket != null) {
+						try {
+							socket.close();
+						} catch (IOException ioe) {
+							ioe.printStackTrace();
+						}
+					}
 				}
 			}
 			if (socket != null) {
 				try {
 					socket.close();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
 				}
 			}
 		}
 		
-		private void readMessage(Scanner reader) {
-			System.out.println("we in this1");
-			String s = "";
-			if (reader.hasNextLine()) {
-				s = CLIENT_NAME + reader.nextLine() + '\n';
-				System.out.println("we in this2");
-			}
-			while (reader.hasNextLine()) {
-				s += " > " + reader.nextLine() + '\n';
-			}
-			System.out.println("im here 1");
-			addText(s);
+		private void readMessage(String message) {
+			SimpleEncryptor enc = new SimpleEncryptor(key);
+			enc.setEncryptedMessage(message);
+			enc.textDecrypt();
+			addText(enc.getClearText() + '\n');
 		}
 		
 		private void readFile(Socket socket) {
@@ -169,22 +188,30 @@ public class ClientApplication extends Application {
 		
 		private void writeMessage(String message) {
 			
-			String s = "";
-			BufferedReader reader = new BufferedReader(
-									new StringReader(message));
-			try {
-				writer.println("<*message*>");
-				while ((s = reader.readLine()) != null) {
-					writer.println(s);
-				}
-			} catch (IOException ioe) {
-				ioe.printStackTrace();
-			} 
-			System.out.println("written2");
+			SimpleEncryptor enc = new SimpleEncryptor(key);
+			enc.setClearText(name + message);
+			enc.textEncrypt();
+			writer.println("<*message*> " + enc.getEncryptedMessage());
 		}
 		
 		private void writeFile() {
 			
+		}
+
+		private void close() {
+			try {
+				if (socket != null) {
+					socket.close();
+				}
+				if (reader != null) {
+					reader.close();
+				}
+				if (writer != null) {
+					writer.close();
+				}
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+			}
 		}
 	}
 }
