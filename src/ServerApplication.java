@@ -1,8 +1,13 @@
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.StringReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Scanner;
@@ -63,7 +68,9 @@ public class ServerApplication extends Application {
 				@Override
 				public void handle(KeyEvent event) {
 					if (event.getCode().equals(KeyCode.ENTER)) {
-						textFlow.getChildren().add(new Text(textArea.getText()));
+						String message = textArea.getText();
+						textFlow.getChildren().add(new Text(SERVER_NAME + message + '\n'));
+						server.writeMessage(message);
 						textArea.clear();
 					}
 				}
@@ -71,7 +78,9 @@ public class ServerApplication extends Application {
 		
 		Button sendButton = new Button("Send");
 		sendButton.setOnAction( event -> {
-			textFlow.getChildren().add(new Text(textArea.getText()));
+			String message = textArea.getText();
+			textFlow.getChildren().add(new Text(SERVER_NAME + message + '\n'));
+			server.writeMessage(message);
 			textArea.clear();
 		});
 		
@@ -84,16 +93,34 @@ public class ServerApplication extends Application {
 		// Set dimensions and display.
 		Scene scene = new Scene(grid, 800, 400);
 		primaryStage.setScene(scene);
+		primaryStage.setOnCloseRequest( event -> {
+			server.interrupt();
+		});
 		primaryStage.show();
+	}
+	
+	private void addText(String s) {
+		System.out.println("im here");
+		Platform.runLater(new Runnable() { 
+			@Override
+			public void run(){
+				textFlow.getChildren().add(new Text(s));
+			}
+		});
 	}
 	
 	class ServerThread extends Thread {
 		
 		private ServerSocket serverSocket;
+		private Socket socket;
+
+		private PrintWriter writer;
+		private Scanner reader;
 		
 		public ServerThread() {
 			try {
-				serverSocket = new ServerSocket(port);			
+				serverSocket = new ServerSocket(55554);
+				socket = null;
 			} catch (IOException ioe) {
 				ioe.printStackTrace();
 			}
@@ -102,52 +129,64 @@ public class ServerApplication extends Application {
 		@Override
 		public void run() {
 			
-			while (true) {
-				BufferedReader reader = null;
+			while (!Thread.currentThread().isInterrupted()) {
 				
 				try {
-					Socket socket = serverSocket.accept();
-					reader = new BufferedReader(
-							new InputStreamReader(socket.getInputStream()));
-					String s = reader.readLine();
-					if (s.equals("<*message*>")) {
-						readMessage(reader);
-					} else if (s.equals("<*file*>")) {
-						readFile(socket);
+					socket = serverSocket.accept();
+					reader = new Scanner(socket.getInputStream());
+					writer = new PrintWriter(socket.getOutputStream(), true);
+					while (true && !Thread.currentThread().isInterrupted()) {
+						String s = reader.next();
+						System.out.println(s);
+						if (s.equals("<*message*>")) {
+							readMessage(reader);
+						} else if (s.equals("<*file*>")) {
+							readFile(socket);
+						}
 					}
 				} catch (IOException ioe) {
 					ioe.printStackTrace();
-				} finally {
-					if (reader  != null) {
-						try {
-							reader.close();
-						} catch (IOException ioe) {
-							// TODO Auto-generated catch block
-							ioe.printStackTrace();
-						}
-					}
-				}
+				} 
+			}
+			try {
+				serverSocket.close();
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
 			}
 		}
 		
-		private void readMessage(BufferedReader reader) {
+		private void readMessage(Scanner reader) {
+			System.out.println("we in this1");
 			String s = "";
-			try {
-				while ((s = reader.readLine()) != null && !(s.equals("<*file*>"))) {
-					
-				}
-			} catch (IOException ioe) {
-				// TODO Auto-generated catch block
-				ioe.printStackTrace();
+			if (reader.hasNextLine()) {
+				s = CLIENT_NAME + reader.nextLine() + '\n';
+				System.out.println("we in this2");
 			}
+			while (reader.hasNextLine()) {
+				s += " > " + reader.nextLine() + '\n';
+			}
+			System.out.println("im here 1");
+			addText(s);
 		}
 		
 		private void readFile(Socket socket) {
 			
 		}
 		
-		private void writeMessage() {
+		private void writeMessage(String message) {
 			
+			String s = "";
+			BufferedReader reader = new BufferedReader(
+									new StringReader(message));
+			try {
+				writer.println("<*message*>");
+				while ((s = reader.readLine()) != null) {
+					writer.println(s);
+				}
+				System.out.println("written1");
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+			}
 		}
 		
 		private void writeFile() {
