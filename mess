@@ -129,4 +129,4 @@ public class FileSenderAndDecryptor extends Application {
 		File inputFile = chooser.showSaveDialog(stage);
 		return inputFile;
 	}
-}
+}9

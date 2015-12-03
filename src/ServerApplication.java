@@ -3,6 +3,9 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -37,9 +40,15 @@ public class ServerApplication extends Application {
 	public String name;
 	
 	private ServerThread server;
+	private FileSenderAndDecryptor  fileSAndD;
 	
 	private final TextArea inputArea = new TextArea();
 	private final TextArea chatArea = new TextArea();
+	
+	private final String MSG_START = "<*MESSAGE>";
+	private final String MSG_CLOSE = "<MESSAGE*>";
+	private final String FILE_START = "<*FILE>";
+	private final String FILE_CLOSE = "<FILE*>";
 	
 	public ServerApplication(String name, String port, String key) {
 		try {
@@ -107,8 +116,8 @@ public class ServerApplication extends Application {
 		
 		Button fileButton = new Button("File");
 		fileButton.setOnAction( event -> {
-			FileSenderAndDecryptor  fsad = new FileSenderAndDecryptor(server, key);
-			fsad.start(new Stage());
+			fileSAndD = new FileSenderAndDecryptor(server, key);
+			fileSAndD.start(new Stage());
 		});
 		
 		grid.add(chatArea, 0, 0);
@@ -166,9 +175,12 @@ public class ServerApplication extends Application {
 					writer = new PrintWriter(socket.getOutputStream(), true);
 					String message = null;
 					while ((message = reader.readLine()) != null) {
-						if (message.contains("<*message>")) {
-							readMessage(message.substring(11));
+						if (message.contains(MSG_START)) {
+							readMessage(message.substring(MSG_START.length()));
+						} else if (message.contains(FILE_START)) {
+							readFile();
 						}
+						System.out.println("waiting in run");
 					}
 				} catch (IOException ioe) {
 					ioe.printStackTrace();
@@ -176,9 +188,8 @@ public class ServerApplication extends Application {
 					if (socket != null) {
 						try {
 							socket.close();
-						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
+						} catch (IOException ioe) {
+							ioe.printStackTrace();
 						}
 					}
 				}
@@ -193,15 +204,36 @@ public class ServerApplication extends Application {
 		}
 		
 		private void readMessage(String message) {
+			String s = "";
+			try {
+				while (!message.contains(MSG_CLOSE) && (s += reader.readLine()).contains(MSG_CLOSE)) {
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 			SimpleEncryptor enc = new SimpleEncryptor(key);
-			enc.setEncryptedMessage(message);
+			message += s;
+			enc.setEncryptedMessage(message.substring(0, message.length()-(MSG_CLOSE.length()-1)));
 			enc.textDecrypt();
 		
 			addText(enc.getClearText() + '\n');
 		}
 		
-		private void readFile(Socket socket) {
-			
+		private void readFile() {
+			PrintWriter out = null;
+			try {
+				out = new PrintWriter(
+						new File("encryptedFile.txt"));
+				String s = "";
+				while ((s = reader.readLine()) != null && !s.contains(FILE_CLOSE)) {
+					System.out.println(s);
+					out.println(s);
+				}
+			} catch (IOException ioe) {
+				
+			}
+			out.close();
+			addText("File saved as \"encryptedFile.txt\"\n");
 		}
 		
 		public void writeMessage(String message) {
@@ -209,11 +241,38 @@ public class ServerApplication extends Application {
 			SimpleEncryptor enc = new SimpleEncryptor(key);
 			enc.setClearText(name + message);
 			enc.textEncrypt();
-			writer.println("<*message> " + enc.getEncryptedMessage());
+			writer.println(MSG_START + enc.getEncryptedMessage() + MSG_CLOSE);
 		}
 		
-		public void writeFile(File file) {
-			
+
+		public void writeFile(File outputFile) {
+			BufferedReader in = null;
+			try {
+				in = new BufferedReader(
+						new FileReader(outputFile.getAbsolutePath()));
+				String s = "";
+				System.out.println("preparing");
+				writer.println(FILE_START);
+				while ((s = in.readLine()) != null) {
+					System.out.println(s);
+					writer.println(s);
+				}
+				writer.println(FILE_CLOSE);
+				addText("File sent!\n");
+			} catch (FileNotFoundException fnfe) {
+				addText("File not found!\n");
+				return;
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+			}
+			if (in != null) {
+				try {
+					in.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
 		}
 		
 		private void close() {
