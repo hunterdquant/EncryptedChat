@@ -339,7 +339,7 @@ public class ServerApplication extends Application {
 				out = new PrintWriter(
 						new File("encryptedFile.txt"));
 				String s = "";
-				while ((s = reader.readLine()) != null && !s.contains(MSG_CLOSE)) {
+				while ((s = reader.readLine()) != null && !s.contains(FILE_CLOSE)) {
 					System.out.println(s);
 					out.println(s);
 				}
