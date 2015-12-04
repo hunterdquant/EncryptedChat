@@ -1,17 +1,12 @@
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.net.Socket;
-import java.util.Scanner;
 
 import javafx.application.Application;
 import javafx.application.Platform;
@@ -24,8 +19,7 @@ import javafx.scene.control.TextArea;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.GridPane;
-import javafx.scene.text.Text;
-import javafx.scene.text.TextFlow;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 public class ClientApplication extends Application {
@@ -63,10 +57,15 @@ public class ClientApplication extends Application {
 		client.start();
 	}
 
+	/**
+	 * Displays and sets up all GUI elements.
+	 * 
+	 * @param primaryStage The main stage for the application.
+	 */
 	@Override
 	public void start(Stage primaryStage) throws Exception {
 		
-		primaryStage.setTitle("Encrypted Chat Server");
+		primaryStage.setTitle("Encrypted Chat Client");
 		GridPane grid = new GridPane();
 		grid.setAlignment(Pos.CENTER);
 		grid.setHgap(10);
@@ -80,12 +79,14 @@ public class ClientApplication extends Application {
 		inputArea.setMaxSize(700, 100);
 		inputArea.setMinSize(700, 100);
 		inputArea.setWrapText(true);
+		inputArea.setPrefRowCount(1);
+		
 		inputArea.setOnKeyPressed(new EventHandler<KeyEvent>() {
 				@Override
 				public void handle(KeyEvent event) {
 					if (event.getCode().equals(KeyCode.ENTER)) {
 						String message = inputArea.getText();
-						chatArea.appendText(name + message + '\n');
+						addText(name + message);
 						client.writeMessage(message);
 						inputArea.clear();
 						Platform.runLater(new Runnable() {
@@ -101,7 +102,7 @@ public class ClientApplication extends Application {
 		Button sendButton = new Button("Send");
 		sendButton.setOnAction( event -> {
 			String message = inputArea.getText();
-			chatArea.appendText(name + message + '\n');
+			addText(name + message);
 			client.writeMessage(message);
 			inputArea.clear();
 			Platform.runLater(new Runnable() {
@@ -111,19 +112,20 @@ public class ClientApplication extends Application {
 				}
 			});
 		});
+		sendButton.setPadding(new Insets(15, 15, 15, 15));
 		
 		Button fileButton = new Button("File");
 		fileButton.setOnAction( event -> {
 			fileSAndD = new FileSenderAndDecryptor(client, key);
 			fileSAndD.start(new Stage());
 		});
+		fileButton.setPadding(new Insets(15, 20, 15, 20));
 		
+		// Added nodes to the grid.
+		VBox vBox = new VBox(sendButton, fileButton);
 		grid.add(chatArea, 0, 0);
 		grid.add(inputArea, 0, 1);
-		grid.add(sendButton, 1, 1);
-		grid.add(fileButton, 1, 2);
-		// Set the column span of the status message.
-		//GridPane.setColumnSpan(textFlow, 3);
+		grid.add(vBox, 1, 1);
 		
 		// Set dimensions and display.
 		Scene scene = new Scene(grid, 800, 400);
@@ -136,11 +138,11 @@ public class ClientApplication extends Application {
 		primaryStage.show();
 	}
 	
-	private void addText(String s) {
+	private void addText(String message) {
 		Platform.runLater(new Runnable() { 
 			@Override
 			public void run(){
-				chatArea.appendText(s);;
+				chatArea.appendText(message + '\n');;
 			}
 		});
 	}
@@ -168,7 +170,7 @@ public class ClientApplication extends Application {
 					String message = null;
 					while ((message = reader.readLine()) != null) {
 						if (message.contains(MSG_START)) {
-							readMessage(message.substring(MSG_START.length()));
+							readMessage();
 						} else if (message.contains(FILE_START)) {
 							readFile();
 						}
@@ -177,38 +179,48 @@ public class ClientApplication extends Application {
 				} catch (IOException ioe) {
 					ioe.printStackTrace();
 				} finally {
-					if (socket != null) {
-						try {
+					// Close the streams.
+					try {
+						if (socket != null)
 							socket.close();
-						} catch (IOException ioe) {
-							ioe.printStackTrace();
-						}
+						if(reader != null)
+							reader.close();
+						if(writer != null)
+							writer.close();
+					} catch (IOException ioe) {
+						ioe.printStackTrace();
 					}
 				}
 			}
-			if (socket != null) {
-				try {
+			// Close the streams
+			try {
+				if (socket != null)
 					socket.close();
-				} catch (IOException ioe) {
-					ioe.printStackTrace();
-				}
+				if(reader != null)
+					reader.close();
+				if(writer != null)
+					writer.close();
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
 			}
 		}
 		
-		private void readMessage(String message) {
+		private void readMessage() {
+			
+			SimpleEncryptor enc = new SimpleEncryptor(key);
+			String message = "";
 			String s = "";
 			try {
-				while (!message.contains(MSG_CLOSE) && (s += reader.readLine()).contains(MSG_CLOSE)) {
+				while ((s = reader.readLine()) != null && !s.contains(MSG_CLOSE)) {
+					enc.setEncryptedMessage(s);
+					enc.textDecrypt();
+					message += enc.getClearText();
 				}
-			} catch (IOException e) {
-				e.printStackTrace();
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
 			}
-			SimpleEncryptor enc = new SimpleEncryptor(key);
-			message += s;
-			enc.setEncryptedMessage(message.substring(0, message.length()-(MSG_CLOSE.length()-1)));
-			enc.textDecrypt();
 		
-			addText(enc.getClearText() + '\n');
+			addText(message);
 		}
 		
 		private void readFile() {
@@ -217,23 +229,35 @@ public class ClientApplication extends Application {
 				out = new PrintWriter(
 						new File("encryptedFile.txt"));
 				String s = "";
-				while ((s = reader.readLine()) != null && !s.contains(FILE_CLOSE)) {
+				while ((s = reader.readLine()) != null && !s.contains(MSG_CLOSE)) {
 					System.out.println(s);
 					out.println(s);
 				}
 			} catch (IOException ioe) {
-				
+				ioe.printStackTrace();
 			}
 			out.close();
-			addText("File saved as \"encryptedFile.txt\"\n");
+			addText("File saved as \"encryptedFile.txt\"");
 		}
 		
 		private void writeMessage(String message) {
 			
 			SimpleEncryptor enc = new SimpleEncryptor(key);
-			enc.setClearText(name + message);
-			enc.textEncrypt();
-			writer.println(MSG_START + enc.getEncryptedMessage() + MSG_CLOSE);
+			BufferedReader br = new BufferedReader(
+								new StringReader(name + message));
+			String s = "";
+			System.out.println("preparing");
+			writer.println(MSG_START);
+			try {
+				while ((s = br.readLine()) != null) {
+					enc.setClearText(s);
+					enc.textEncrypt();
+					writer.println(enc.getEncryptedMessage());
+				}
+			} catch (IOException ioe) {
+				ioe.printStackTrace();
+			}
+			writer.println(MSG_CLOSE);
 		}
 
 		public void writeFile(File outputFile) {
@@ -249,19 +273,20 @@ public class ClientApplication extends Application {
 					writer.println(s);
 				}
 				writer.println(FILE_CLOSE);
-				addText("File sent!\n");
+				addText("File sent!");
 			} catch (FileNotFoundException fnfe) {
-				addText("File not found!\n");
+				addText("File not found!");
 				return;
 			} catch (IOException ioe) {
 				ioe.printStackTrace();
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 			if (in != null) {
 				try {
 					in.close();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
 				}
 			}
 		}

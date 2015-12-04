@@ -12,6 +12,15 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 
+/**
+ *  Provides encryption for a file.
+ *  
+ * EDIT: This class was edited to work with the encrypted chat.
+ * - Now is constructed with a key as an argument.
+ * - Some documentation may not fit as a result.
+ *  
+ * @author Hunter Quant
+ */
 public class FileEncryptor extends Encryptor{
 	
 	/* data members */

@@ -7,14 +7,12 @@
 
 import java.io.File;
 
+import javafx.application.Application;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
-import javafx.scene.control.TextField;
-import javafx.application.Application;
-import javafx.geometry.Pos;
 import javafx.scene.layout.GridPane;
-import javafx.scene.text.Text;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -41,7 +39,9 @@ public class FileSenderAndDecryptor extends Application {
 	/* public methods */
 	
 	/**
-	 * The start method for the GUI application.
+	 * Displays and sets up all GUI elements.
+	 * 
+	 * @param primaryStage The main stage for the application.
 	 */
 	@Override
 	public void start(Stage primaryStage) {

@@ -2,6 +2,10 @@
  * @author Hunter Quant <quanthd@clarkson.edu>
  *
  * Provides encryption for a line of text.
+ * 
+ * EDIT: This class was edited to work with the encrypted chat.
+ * - Now is constructed with a key as an argument.
+ * - Some documentation may not fit as a result.
  */
 
 
@@ -9,7 +13,7 @@ public class SimpleEncryptor extends Encryptor {
 	
 		
 	/**
-	 * Default constructor.
+	 * New Constructor
 	 */
 	public SimpleEncryptor(int n) {
 		setEncryptionKey(n);
@@ -20,15 +24,9 @@ public class SimpleEncryptor extends Encryptor {
 	 */
 	@Override
 	public void textEncrypt() {
-		
-		// Get the sum off all characters.
+
 		char[] msgChars = getClearText().toCharArray();
-		int sum = 0;
-		for (char c : msgChars) {
-			sum += c;
-		}
 		
-		// Sum mod 128 is the encryption key for the message.
 		int key = getEncryptionKey(); 
 		// Add 4 to each char in the message.
 		for (int i = 0; i < msgChars.length; i++) {

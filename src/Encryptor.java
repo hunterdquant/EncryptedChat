@@ -2,6 +2,8 @@
  * @author Hunter Quant <quanthd@clarkson.edu>
  *
  * Provides features for Encryptor classes.
+ * 
+ * EDIT: The class was edited to use integers for the key.
  */
 
 public abstract class Encryptor {
