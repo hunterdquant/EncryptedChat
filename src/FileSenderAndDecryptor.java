@@ -26,8 +26,9 @@ public class FileSenderAndDecryptor extends Application {
 	FileSenderAndDecryptor(Thread t, int key) {
 		this.key = key;
 		if (t instanceof ServerApplication.ServerThread) {
+			System.out.println("server sender");
 			server = (ServerApplication.ServerThread)t;
-			server = null;
+			client = null;
 		} else if (t instanceof ClientApplication.ClientThread) {
 			client = (ClientApplication.ClientThread)t;
 			server = null;
@@ -71,6 +72,8 @@ public class FileSenderAndDecryptor extends Application {
 					server.writeFile(outputFile);
 				} else if (client != null) {
 					client.writeFile(outputFile);
+				} else {
+					System.out.println("file not written");
 				}
 			}
 		});

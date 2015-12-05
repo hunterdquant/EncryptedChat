@@ -227,14 +227,21 @@ public class ClientApplication extends Application {
 			PrintWriter out = null;
 			try {
 				out = new PrintWriter(
-						new File("encryptedFile.txt"));
-				String s = "";
-				while ((s = reader.readLine()) != null && !s.contains(FILE_CLOSE)) {
-					System.out.println(s);
-					out.println(s);
+						new File("encryptedFile"));
+				String s = reader.readLine();
+				while (s != null && !s.contains(FILE_CLOSE)) {
+					String temp = s;
+					s = reader.readLine();
+					if (s == null || s.contains(FILE_CLOSE)) {
+						out.print(temp);
+					} else {
+						out.println(temp);
+					}
 				}
 			} catch (IOException ioe) {
 				ioe.printStackTrace();
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 			out.close();
 			addText("File saved as \"encryptedFile.txt\"");
