@@ -45,7 +45,7 @@ public class EncryptedChat extends Application {
 				Button serverButton = new Button("Run as server");
 				serverButton.setOnAction( event -> {
 					if (validateServerParameters(portNumber.getText(), encryptionKey.getText())) {
-						ServerApplication server = new ServerApplication(name.getText(), portNumber.getText(), encryptionKey.getText());
+						ClientServerChatApplication server = new ClientServerChatApplication(name.getText(), portNumber.getText(), encryptionKey.getText(), true);
 						try {
 							server.start(primaryStage);
 						} catch (Exception e) {
@@ -57,7 +57,7 @@ public class EncryptedChat extends Application {
 				Button clientButton = new Button("Run as client");
 				clientButton.setOnAction( event -> {
 					if (validateClientParameters(portNumber.getText(), encryptionKey.getText(), ipAddress.getText())) {
-						ClientApplication client = new ClientApplication(name.getText(), ipAddress.getText(), portNumber.getText(), encryptionKey.getText());
+						ClientServerChatApplication client = new ClientServerChatApplication(name.getText(), ipAddress.getText(), portNumber.getText(), encryptionKey.getText(), false);
 						try {
 							client.start(primaryStage);
 						} catch (Exception e) {

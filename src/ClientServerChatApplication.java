@@ -28,9 +28,19 @@ import javafx.stage.Stage;
  * 
  * @author Hunter Quant
  */
-public class ServerApplication extends Application {
+public class ClientServerChatApplication extends Application {
 	
 	/* data members */
+	
+	/**
+	 * The name of the user.
+	 */
+	public String name;
+	
+	/**
+	 * Used as the machine address to connect to if the application is launched as a client.
+	 */
+	private String ip;
 	
 	/**
 	 * Used to open the socket.
@@ -43,14 +53,14 @@ public class ServerApplication extends Application {
 	public int key;
 	
 	/**
-	 * The name of the user.
-	 */
-	public String name;
-	
-	/**
 	 * The network thread.
 	 */
-	private ServerThread server;
+	private NetworkThread networkThread;
+	
+	/**
+	 * Flag for if the network acts as a server.
+	 */
+	private boolean isServer;
 	
 	/**
 	 * Application for sending and decrypting.
@@ -82,13 +92,13 @@ public class ServerApplication extends Application {
 	/* constructors */
 	
 	/**
-	 * Creates a ServerApplication.
+	 * Creates a ServerApplication without ip.
 	 * 
 	 * @param name The users name
 	 * @param port The port to open the socket on.
 	 * @param key The key for encryption/decryption.
 	 */
-	public ServerApplication(String name, String port, String key) {
+	public ClientServerChatApplication(String name, String port, String key, boolean isServer) {
 		try {
 			this.name = name + " > ";
 			this.port = Integer.parseInt(port);
@@ -99,11 +109,35 @@ public class ServerApplication extends Application {
 			this.port = 1995;
 			this.key = 64;
 		}
-		// Start the server thread.
-		server = new ServerThread();
-		server.start();
+		this.isServer = true;
+		// Start the network thread
+		networkThread = new NetworkThread();
+		networkThread.start();
 	}
 
+	/**
+	 * Creates a ServerApplication.
+	 * 
+	 * @param name The users name
+	 * @param port The port to open the socket on.
+	 * @param key The key for encryption/decryption.
+	 */
+	public ClientServerChatApplication(String name, String ip, String port, String key, boolean isServer) {
+		try {
+			this.name = name + " > ";
+			this.ip = ip;
+			this.port = Integer.parseInt(port);
+			this.key = Integer.parseInt(key);
+		} catch (NumberFormatException nfe) {
+			// Defaults if there is a parse error.
+			this.port = 1995;
+			this.key = 64;
+		}
+		// Start the server thread.
+		networkThread = new NetworkThread();
+		networkThread.start();
+	}
+	
 	/* public methods */
 	
 	/**
@@ -141,7 +175,7 @@ public class ServerApplication extends Application {
 						// Get the text and send it.
 						String message = inputArea.getText();
 						addText(name + message);
-						server.writeMessage(message);
+						networkThread.writeMessage(message);
 						inputArea.clear();
 						// Reposition the cursor.
 						Platform.runLater(new Runnable() {
@@ -160,7 +194,7 @@ public class ServerApplication extends Application {
 			// Get the message and write it to the network using the server thread.
 			String message = inputArea.getText();
 			addText(name + message);
-			server.writeMessage(message);
+			networkThread.writeMessage(message);
 			inputArea.clear();
 			// Reset the cursor.
 			Platform.runLater(new Runnable() {
@@ -174,7 +208,7 @@ public class ServerApplication extends Application {
 		
 		Button fileButton = new Button("File");
 		fileButton.setOnAction( event -> {
-			fileSAndD = new FileSenderAndDecryptor(server, key);
+			fileSAndD = new FileSenderAndDecryptor(networkThread, key);
 			fileSAndD.start(new Stage());
 		});
 		fileButton.setPadding(new Insets(15, 20, 15, 20));
@@ -190,8 +224,8 @@ public class ServerApplication extends Application {
 		primaryStage.setScene(scene);
 		// Window parameters
 		primaryStage.setOnCloseRequest( event -> {
-			server.close();
-			server.interrupt();
+			networkThread.close();
+			networkThread.interrupt();
 		});
 		primaryStage.setResizable(false);
 		primaryStage.show();
@@ -218,7 +252,7 @@ public class ServerApplication extends Application {
 	 * 
 	 * @author Hunter Quant
 	 */
-	class ServerThread extends Thread {
+	public class NetworkThread extends Thread {
 		
 		/**
 		 * The server socket.
@@ -245,10 +279,12 @@ public class ServerApplication extends Application {
 		/**
 		 * Creates a ServerThread.
 		 */
-		public ServerThread() {
+		public NetworkThread() {
 			// Initialize the sockets with the user input credentials.
 			try {
-				serverSocket = new ServerSocket(port);
+				if (isServer) {
+					serverSocket = new ServerSocket(port);
+				}
 				socket = null;
 			} catch (IOException ioe) {
 				ioe.printStackTrace();
@@ -266,8 +302,13 @@ public class ServerApplication extends Application {
 			// Loop till the thread is interupted.
 			while (!Thread.currentThread().isInterrupted()) {
 				try {
+					
 					// Establish the connection.
-					socket = serverSocket.accept();
+					if (isServer) {
+						socket = serverSocket.accept();
+					} else {
+						socket = new Socket(ip, port);
+					}
 					// Init reader/writer.
 					reader = new BufferedReader(
 							new InputStreamReader(socket.getInputStream()));

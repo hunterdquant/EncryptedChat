@@ -18,24 +18,13 @@ import javafx.stage.Stage;
 
 public class FileSenderAndDecryptor extends Application {
 
-	private ServerApplication.ServerThread server;
-	private ClientApplication.ClientThread client;
+	private ClientServerChatApplication.NetworkThread networkThread;
 	
 	private int key;
 	
-	FileSenderAndDecryptor(Thread t, int key) {
+	FileSenderAndDecryptor(ClientServerChatApplication.NetworkThread networkThread, int key) {
+		this.networkThread = networkThread;
 		this.key = key;
-		if (t instanceof ServerApplication.ServerThread) {
-			System.out.println("server sender");
-			server = (ServerApplication.ServerThread)t;
-			client = null;
-		} else if (t instanceof ClientApplication.ClientThread) {
-			client = (ClientApplication.ClientThread)t;
-			server = null;
-		} else {
-			client = null;
-			server = null;
-		}
 	}
 	/* public methods */
 	
@@ -68,13 +57,7 @@ public class FileSenderAndDecryptor extends Application {
 				FileEncryptor fe = new FileEncryptor(inputFile, outputFile.getAbsolutePath(), key);
 				fe.textEncrypt();
 				// Display information to the user.
-				if (server != null) {
-					server.writeFile(outputFile);
-				} else if (client != null) {
-					client.writeFile(outputFile);
-				} else {
-					System.out.println("file not written");
-				}
+				networkThread.writeFile(outputFile);
 			}
 		});
 		
