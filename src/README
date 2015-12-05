@@ -1,0 +1,14 @@
+To run: java EncryptedChat
+
+To run as a server you need.
+1. port
+2. key
+
+To run as a client you need.
+1. ip
+2. port
+3. key
+
+Tip: Enter is assigned to send message.
+
+Comment: Sometimes the chatbox appears to have extra newlines, but is actually because the text area contains a newline from pressing enter.

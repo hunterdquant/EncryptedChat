@@ -92,7 +92,7 @@ public class ClientServerChatApplication extends Application {
 	/* constructors */
 	
 	/**
-	 * Creates a ServerApplication without ip.
+	 * Creates a ClientServerChatApplication without ip for the server.
 	 * 
 	 * @param name The users name
 	 * @param port The port to open the socket on.
@@ -102,7 +102,6 @@ public class ClientServerChatApplication extends Application {
 		try {
 			this.name = name + " > ";
 			this.port = Integer.parseInt(port);
-			System.out.println(this.port);
 			this.key = Integer.parseInt(key);
 		} catch (NumberFormatException nfe) {
 			// Defaults if there is a parse error.
@@ -116,7 +115,7 @@ public class ClientServerChatApplication extends Application {
 	}
 
 	/**
-	 * Creates a ServerApplication.
+	 * Creates a ClientServerChatApplication with ip for the client.
 	 * 
 	 * @param name The users name
 	 * @param port The port to open the socket on.
@@ -133,6 +132,7 @@ public class ClientServerChatApplication extends Application {
 			this.port = 1995;
 			this.key = 64;
 		}
+		this.isServer = false;
 		// Start the server thread.
 		networkThread = new NetworkThread();
 		networkThread.start();
@@ -191,7 +191,7 @@ public class ClientServerChatApplication extends Application {
 		// Set the function of the send button.
 		Button sendButton = new Button("Send");
 		sendButton.setOnAction( event -> {
-			// Get the message and write it to the network using the server thread.
+			// Get the message and write it to the network thread.
 			String message = inputArea.getText();
 			addText(name + message);
 			networkThread.writeMessage(message);
@@ -206,9 +206,12 @@ public class ClientServerChatApplication extends Application {
 		});
 		sendButton.setPadding(new Insets(15, 15, 15, 15));
 		
+		// Set the function of the file button
 		Button fileButton = new Button("File");
 		fileButton.setOnAction( event -> {
+			// Open the file sender and decryptor.
 			fileSAndD = new FileSenderAndDecryptor(networkThread, key);
+			// Start it as a new application.
 			fileSAndD.start(new Stage());
 		});
 		fileButton.setPadding(new Insets(15, 20, 15, 20));
@@ -224,6 +227,7 @@ public class ClientServerChatApplication extends Application {
 		primaryStage.setScene(scene);
 		// Window parameters
 		primaryStage.setOnCloseRequest( event -> {
+			// Ensure all streams are closed and ports are freed.
 			networkThread.close();
 			networkThread.interrupt();
 		});
@@ -248,7 +252,7 @@ public class ClientServerChatApplication extends Application {
 	}
 	
 	/**
-	 * Inner class, which is a thread for running the server code.
+	 * Inner class, which is a thread for running the network code.
 	 * 
 	 * @author Hunter Quant
 	 */
@@ -282,12 +286,13 @@ public class ClientServerChatApplication extends Application {
 		public NetworkThread() {
 			// Initialize the sockets with the user input credentials.
 			try {
+				// Start the server socket if the client launched the application as a server.
 				if (isServer) {
 					serverSocket = new ServerSocket(port);
 				}
 				socket = null;
 			} catch (IOException ioe) {
-				ioe.printStackTrace();
+				addText("Port already in use, restart and select an unoccupied port.");
 			}
 		}
 		
@@ -305,9 +310,12 @@ public class ClientServerChatApplication extends Application {
 					
 					// Establish the connection.
 					if (isServer) {
+						addText("Waiting for a client to connect.");
 						socket = serverSocket.accept();
+						addText("Connected to a client.");
 					} else {
 						socket = new Socket(ip, port);
+						addText("Connected to a server.");
 					}
 					// Init reader/writer.
 					reader = new BufferedReader(
@@ -325,28 +333,31 @@ public class ClientServerChatApplication extends Application {
 						}
 					}
 				} catch (IOException ioe) {
-					addText("Disconnected from the client\n");
+					addText("Disconnected. Reconnect to chat again.");
+					break;
 				} finally {
+					addText("The other user disconnected.");
 					// Close the streams.
 					try {
 						if (socket != null)
 							socket.close();
-						if(reader != null)
+						if (reader != null)
 							reader.close();
-						if(writer != null)
+						if (writer != null)
 							writer.close();
 					} catch (IOException ioe) {
 						ioe.printStackTrace();
 					}
 				}
+				
 			}
-			//Close the streams
+			// Ensure the streams are closed.
 			try {
 				if (socket != null)
 					socket.close();
-				if(reader != null)
+				if (reader != null)
 					reader.close();
-				if(writer != null)
+				if (writer != null)
 					writer.close();
 			} catch (IOException ioe) {
 				ioe.printStackTrace();
@@ -354,16 +365,19 @@ public class ClientServerChatApplication extends Application {
 		}
 		
 		/**
-		 * Reads the message from the network untill seeing a closing tag.
-		 * 
-		 * @param message
+		 * Reads the message from the network until seeing a closing tag.
 		 */
 		private void readMessage() {
+			// Encrypts the message.
 			SimpleEncryptor enc = new SimpleEncryptor(key);
+			// Used to build the message.
 			String message = "";
+			// Used to get the next line.
 			String s = "";
 			try {
+				// Read until you reach the closing tag.
 				while ((s = reader.readLine()) != null && !s.contains(MSG_CLOSE)) {
+					// Encrypt each line and build the message.
 					enc.setEncryptedMessage(s);
 					enc.textDecrypt();
 					message += enc.getClearText();
@@ -373,16 +387,21 @@ public class ClientServerChatApplication extends Application {
 			}
 			addText(message);
 		}
-		
+		 /**
+		  * Reads a file from the network and writes it to the system.
+		  */
 		private void readFile() {
 			PrintWriter out = null;
 			try {
 				out = new PrintWriter(
 						new File("encryptedFile"));
+				// Had to essentially create a hasNextLine for BufferedReader
+				// I was getting an extra new line and thus an extra character after decrypting.
 				String s = reader.readLine();
 				while (s != null && !s.contains(FILE_CLOSE)) {
 					String temp = s;
 					s = reader.readLine();
+					// If s is null or the end of the file we don't want the last new line.
 					if (s == null || s.contains(FILE_CLOSE)) {
 						out.print(temp);
 					} else {
@@ -395,18 +414,25 @@ public class ClientServerChatApplication extends Application {
 				e.printStackTrace();
 			}
 			out.close();
-			addText("File saved as \"encryptedFile.txt\"");
+			addText("File recieved from the other user and saved as \"encryptedFile.txt\"");
 		}
 		
+		/**
+		 * Write the message to the network.
+		 * 
+		 * @param message The message to be sent over the network.
+		 */
 		public void writeMessage(String message) {
-		
+			
 			SimpleEncryptor enc = new SimpleEncryptor(key);
 			BufferedReader br = new BufferedReader(
 								new StringReader(name + message));
 			String s = "";
-			System.out.println("preparing");
+			
+			// Start message with the start tag.
 			writer.println(MSG_START);
 			try {
+				// Encrypt each line and write it to the network.
 				while ((s = br.readLine()) != null) {
 					enc.setClearText(s);
 					enc.textEncrypt();
@@ -414,23 +440,36 @@ public class ClientServerChatApplication extends Application {
 				}
 			} catch (IOException ioe) {
 				ioe.printStackTrace();
+			} finally {
+				try {
+					br.close();
+				} catch (IOException ioe) {
+					ioe.printStackTrace();
+				}
 			}
+			// End with the closing tag.
 			writer.println(MSG_CLOSE);
 		}
 		
-
+		/**
+		 * Write the file to the network.
+		 * 
+		 * @param outputFile The file to be wrote to the network.
+		 */
 		public void writeFile(File outputFile) {
 			BufferedReader in = null;
 			try {
 				in = new BufferedReader(
 						new FileReader(outputFile.getAbsolutePath()));
 				String s = "";
-				System.out.println("preparing");
+				
+				// Start file with the start tag.
 				writer.println(FILE_START);
+				//Write each line to the network.
 				while ((s = in.readLine()) != null) {
-					System.out.println(s);
 					writer.println(s);
 				}
+				// End with the closing tag.
 				writer.println(FILE_CLOSE);
 				addText("File sent!");
 			} catch (FileNotFoundException fnfe) {
@@ -450,12 +489,13 @@ public class ClientServerChatApplication extends Application {
 			}
 		}
 		
+		/**
+		 * Ensures all streams are closed when closing the application.
+		 */
 		private void close() {
-			
 			try {
 				if (socket != null) {
 					socket.close();
-					
 				}
 				if (reader != null) {
 					reader.close();

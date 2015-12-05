@@ -1,10 +1,3 @@
-/**
- * 
- * @author Hunter Quant <quanthd@clarkson.edu>
- *
- * A graphical user interface for file encryption.
- */
-
 import java.io.File;
 
 import javafx.application.Application;
@@ -16,16 +9,38 @@ import javafx.scene.layout.GridPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
+/**
+ * Retrieves and encrypts files to then send on the network, also decrypts files.
+ * 
+ * @author Hunter Quant
+ */
 public class FileSenderAndDecryptor extends Application {
-
+	
+	/* data members */
+	
+	/**
+	 * The network to write the files to.
+	 */
 	private ClientServerChatApplication.NetworkThread networkThread;
 	
+	/**
+	 * The key for encrypting and decrypting the files.
+	 */
 	private int key;
 	
-	FileSenderAndDecryptor(ClientServerChatApplication.NetworkThread networkThread, int key) {
+	/* constructors */
+	
+	/**
+	 * Constructs a FileSenderAndDecryptor.
+	 * 
+	 * @param networkThread The network to write the files to.
+	 * @param key The key for encrypting and decrypting the files.
+	 */
+	public FileSenderAndDecryptor(ClientServerChatApplication.NetworkThread networkThread, int key) {
 		this.networkThread = networkThread;
 		this.key = key;
 	}
+	
 	/* public methods */
 	
 	/**
@@ -43,43 +58,38 @@ public class FileSenderAndDecryptor extends Application {
 		grid.setVgap(10);
 		grid.setPadding(new Insets(25, 25, 25, 25));		
 		
-		// Button and click event for encryption.
-		Button eButton = new Button("Send");
-		eButton.setOnAction( event -> {
+		// Button and click event for sending a file.
+		Button sButton = new Button("Send");
+		sButton.setMinSize(100, 50);
+		sButton.setOnAction( event -> {
 			// Get the respective files.
 			File inputFile = getInputFile();
 			File outputFile = getOutputFile();
-			
-			// If the don't exist report to the user.
 			if (inputFile != null) {
-				
 				// Create the FileEncryptor and encrypt the file.
 				FileEncryptor fe = new FileEncryptor(inputFile, outputFile.getAbsolutePath(), key);
 				fe.textEncrypt();
-				// Display information to the user.
+				// Send the file to the network.
 				networkThread.writeFile(outputFile);
 			}
 		});
 		
+		// Button and click event for decrypting a file.
 		Button dButton = new Button("Decrypt");
+		dButton.setMinSize(100, 50);
 		dButton.setOnAction( event -> {
+			File inputFile = getInputFile();
+			File outputFile = getOutputFile();
 			
-			try {
-				File inputFile = getInputFile();
-				File outputFile = getOutputFile();
+			if (inputFile != null && outputFile != null) {
 				
-				if (inputFile != null && outputFile != null) {
-					
-					FileEncryptor fe = new FileEncryptor(inputFile, outputFile.getAbsolutePath(), key);
-					fe.textDecrypt();
-				}
-			} catch (NumberFormatException nfe) {
-				
+				FileEncryptor fe = new FileEncryptor(inputFile, outputFile.getAbsolutePath(), key);
+				fe.textDecrypt();
 			}
 		});
 		
 		// Add the gui elements.
-		grid.add(eButton, 0, 0);
+		grid.add(sButton, 0, 0);
 		grid.add(dButton, 0, 1);
 		
 		// Set dimensions and display.
